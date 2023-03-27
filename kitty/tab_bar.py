@@ -635,7 +635,7 @@ class TabBar:
         last_tab = data[-1] if data else None
         ed = ExtraData()
 
-        def draw_tab(i: int, tab: TabBarData, cell_ranges: List[Tuple[int, int]], max_tab_length: int) -> None:
+        def draw_tab(i: int, t: TabBarData, cell_ranges: List[Tuple[int, int]], max_tab_length: int) -> None:
             ed.prev_tab = data[i - 1] if i > 0 else None
             ed.next_tab = data[i + 1] if i + 1 < len(data) else None
             s.cursor.bg = as_rgb(self.draw_data.tab_bg(t))
@@ -655,13 +655,13 @@ class TabBar:
 
         unconstrained_tab_length = max(1, s.columns - 2)
         ideal_tab_lengths = [i for i in range(len(data))]
-        default_max_tab_length = max(1, (s.columns // max(1, len(data))) - 1)
+        default_max_tab_length = max(1, ((s.columns - 10) // max(1, len(data))) - 1)
         max_tab_lengths = [default_max_tab_length for _ in range(len(data))]
         active_idx = 0
         extra = 0
         ed.for_layout = True
         for i, t in enumerate(data):
-            s.cursor.x = 0
+            s.cursor.x = 10
             draw_tab(i, t, [], unconstrained_tab_length)
             ideal_tab_lengths[i] = tl = max(1, s.cursor.x)
             if t.is_active:
@@ -682,7 +682,7 @@ class TabBar:
                         for i in over_achievers:
                             max_tab_lengths[i] += amt_per_over_achiever
 
-        s.cursor.x = 0
+        s.cursor.x = 10
         s.erase_in_line(2, False)
         cr: List[Tuple[int, int]] = []
         ed.for_layout = False

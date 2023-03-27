@@ -2596,7 +2596,7 @@ bool _glfwPlatformToggleFullscreen(_GLFWwindow* w, unsigned int flags) {
     if (w->ns.titlebar_hidden) {
         // The hidden buttons might be automatically reset to be visible after going full screen
         // to show up in the auto-hide title bar, so they need to be set back to hidden.
-        BOOL button_hidden = YES;
+        BOOL button_hidden = NO;
         // When title bar is configured to be hidden, it should be shown with buttons (auto-hide) after going to full screen.
         if (!traditional) {
             button_hidden = (BOOL) !made_fullscreen;
@@ -2918,15 +2918,15 @@ GLFWAPI void glfwHideCocoaTitlebar(GLFWwindow* handle, bool yes) {
     _GLFWwindow* w = (_GLFWwindow*) handle;
     NSWindow *window = w->ns.object;
     w->ns.titlebar_hidden = yes;
-    NSButton *button;
-    button = [window standardWindowButton: NSWindowCloseButton];
-    if (button) button.hidden = yes;
-    button = [window standardWindowButton: NSWindowMiniaturizeButton];
-    if (button) button.hidden = yes;
-    button = [window standardWindowButton: NSWindowZoomButton];
-    [window setTitlebarAppearsTransparent:yes];
-    if (button) button.hidden = yes;
+    /* NSButton *button; */
+    /* button = [window standardWindowButton: NSWindowCloseButton]; */
+    /* if (button) button.hidden = yes; */
+    /* button = [window standardWindowButton: NSWindowMiniaturizeButton]; */
+    /* if (button) button.hidden = yes; */
+    /* button = [window standardWindowButton: NSWindowZoomButton]; */
+    /* if (button) button.hidden = yes; */
 
+    [window setTitlebarAppearsTransparent:yes];
     // http://svenandersson.se/2016/rendering-to-full-size-of-an-nswindow-using-glfw3.html
     NSView* glView = [window contentView];
     Method originalMethod = class_getInstanceMethod([glView class], @selector(mouseDownCanMoveWindow));
