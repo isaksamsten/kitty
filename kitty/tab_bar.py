@@ -534,12 +534,27 @@ class TabBar:
             self.draw_func = load_custom_draw_tab()
         else:
             self.draw_func = draw_tab_with_fade
+
         if opts.tab_bar_align == 'center':
-            self.align: Callable[[], None] = partial(self.align_with_factor, 2)
+            align: Callable[[], None] = partial(self.align_with_factor, 2)
         elif opts.tab_bar_align == 'right':
-            self.align = self.align_with_factor
+            align = self.align_with_factor
         else:
-            self.align = lambda: None
+            align = lambda: None
+
+        if opts.hide_window_decorations > 1:
+            self.button_margin = 7
+
+            def center_single_tab():
+                if len(self.cell_ranges) > 1:
+                    align()
+                else:
+                    self.align_with_factor(2)
+
+            self.align = center_single_tab
+        else:
+            self.button_margin = 0
+            self.align = align
 
     def patch_colors(self, spec: Dict[str, Optional[int]]) -> None:
         opts = get_options()
@@ -655,13 +670,13 @@ class TabBar:
 
         unconstrained_tab_length = max(1, s.columns - 2)
         ideal_tab_lengths = [i for i in range(len(data))]
-        default_max_tab_length = max(1, ((s.columns - 10) // max(1, len(data))) - 1)
+        default_max_tab_length = max(1, ((s.columns - self.button_margin) // max(1, len(data))) - 1)
         max_tab_lengths = [default_max_tab_length for _ in range(len(data))]
         active_idx = 0
         extra = 0
         ed.for_layout = True
         for i, t in enumerate(data):
-            s.cursor.x = 10
+            s.cursor.x = self.button_margin
             draw_tab(i, t, [], unconstrained_tab_length)
             ideal_tab_lengths[i] = tl = max(1, s.cursor.x)
             if t.is_active:
@@ -682,7 +697,7 @@ class TabBar:
                         for i in over_achievers:
                             max_tab_lengths[i] += amt_per_over_achiever
 
-        s.cursor.x = 10
+        s.cursor.x = self.button_margin
         s.erase_in_line(2, False)
         cr: List[Tuple[int, int]] = []
         ed.for_layout = False
@@ -700,8 +715,8 @@ class TabBar:
         if not self.cell_ranges:
             return
         end = self.cell_ranges[-1][1]
-        if end < self.screen.columns - 1:
-            shift = (self.screen.columns - end) // factor
+        if end < self.screen.columns - self.button_margin - 1:
+            shift = (self.screen.columns - self.button_margin - end) // factor
             self.screen.cursor.x = 0
             self.screen.insert_characters(shift)
             self.cell_ranges = [(s + shift, e + shift) for (s, e) in self.cell_ranges]
