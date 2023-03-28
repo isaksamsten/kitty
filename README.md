@@ -2,7 +2,7 @@
 
 This fork makes Kitty more usable on macOS without title bar enabled.
 
-**NOTE** THESE CHANGES WILL NOTE BE MERGED IN MAIN.
+**NOTE** THESE CHANGES WILL NOTE BE MERGED INTO MAIN.
 
 ## Changes
 
@@ -30,3 +30,11 @@ inactive_tab_foreground #817c9c
 tab_bar_background #181725
 tab_bar_margin_color #181725
 ```
+
+## Screenshots
+
+![Single tab](https://i.imgur.com/CbILExU.png)
+
+![Two tabs](https://i.imgur.com/F6GS3ij.png)
+
+[Video showcase](https://i.imgur.com/TZNW9uj.mp4)
