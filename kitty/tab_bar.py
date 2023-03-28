@@ -543,7 +543,7 @@ class TabBar:
             align = lambda: None
 
         if opts.hide_window_decorations > 1:
-            self.button_margin = 7
+            self.button_margin = 8
 
             def center_single_tab():
                 if len(self.cell_ranges) > 1:

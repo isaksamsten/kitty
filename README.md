@@ -1,0 +1,32 @@
+# kitty - the fast, feature-rich, cross-platform, GPU based terminal
+
+This fork makes Kitty more usable on macOS without title bar enabled.
+
+**NOTE** THESE CHANGES WILL NOTE BE MERGED IN MAIN.
+
+## Changes
+
+-   Enable `drag-window-move` when dragging the tab-bar
+-   Center single tab
+-   Enable window buttons if `hide_window_decorations = titlebar-only`
+
+## Configuration
+
+```
+hide_window_decorations titlebar-only
+tab_bar_edge top
+tab_bar_margin_height 6 6
+tab_bar_min_tabs 1
+```
+
+Also, for best result, ensure that the active, inactive, tab_bar and the margin
+has the same background color:
+
+```
+active_tab_background #181725
+active_tab_foreground #e0def4
+inactive_tab_background #181725
+inactive_tab_foreground #817c9c
+tab_bar_background #181725
+tab_bar_margin_color #181725
+```
