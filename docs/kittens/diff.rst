@@ -31,11 +31,7 @@ Major Features
 Installation
 ---------------
 
-Simply :ref:`install kitty <quickstart>`.  You also need to have either the `git
-<https://git-scm.com/>`__ program or the :program:`diff` program installed.
-Additionally, for syntax highlighting to work, `pygments
-<https://pygments.org/>`__ must be installed (note that pygments is included in
-the official kitty binary builds).
+Simply :ref:`install kitty <quickstart>`.
 
 
 Usage
@@ -124,7 +120,7 @@ The diff kitten makes use of various features that are :doc:`kitty only
 </graphics-protocol>`, the :doc:`extended keyboard protocol
 </keyboard-protocol>`, etc. It also leverages terminal program infrastructure
 I created for all of kitty's other kittens to reduce the amount of code needed
-(the entire implementation is under 2000 lines of code).
+(the entire implementation is under 3000 lines of code).
 
 And fundamentally, it's kitty only because I wrote it for myself, and I am
 highly unlikely to use any other terminals :)

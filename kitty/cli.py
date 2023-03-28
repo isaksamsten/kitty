@@ -36,9 +36,9 @@ class CompletionRelativeTo(Enum):
 class CompletionSpec:
 
     type: CompletionType = CompletionType.none
-    kwds: Sequence[str] = ()
-    extensions: Sequence[str] = ()
-    mime_patterns: Sequence[str] = ()
+    kwds: Tuple[str,...] = ()
+    extensions: Tuple[str,...] = ()
+    mime_patterns: Tuple[str,...] = ()
     group: str = ''
     relative_to: CompletionRelativeTo = CompletionRelativeTo.cwd
 
@@ -50,13 +50,13 @@ class CompletionSpec:
             if ck == 'type':
                 self.type = getattr(CompletionType, vv)
             elif ck == 'kwds':
-                self.kwds = tuple(vv.split(','))
+                self.kwds += tuple(vv.split(','))
             elif ck == 'ext':
-                self.extensions = tuple(vv.split(','))
+                self.extensions += tuple(vv.split(','))
             elif ck == 'group':
                 self.group = vv
             elif ck == 'mime':
-                self.mime_patterns = tuple(vv.split(','))
+                self.mime_patterns += tuple(vv.split(','))
             elif ck == 'relative':
                 if vv == 'conf':
                     self.relative_to = CompletionRelativeTo.config_dir
@@ -898,6 +898,8 @@ Path to a file containing the startup :italic:`session` (tabs, windows, layout,
 programs). Use - to read from STDIN. See the :file:`README` file for details and
 an example. Environment variables in the file name are expanded,
 relative paths are resolved relative to the kitty configuration directory.
+The special value :code:`none` means no session will be used, even if
+the :opt:`startup_session` option has been specified in kitty.conf.
 
 
 --hold

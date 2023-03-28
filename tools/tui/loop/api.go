@@ -62,6 +62,7 @@ type Loop struct {
 	on_SIGTSTP                             func() error
 	style_cache                            map[string]func(...any) string
 	style_ctx                              style.Context
+	atomic_update_active                   bool
 
 	// Suspend the loop restoring terminal state. Call the return resume function to restore the loop
 	Suspend func() (func() error, error)
@@ -290,11 +291,20 @@ func (self *Loop) Beep() {
 }
 
 func (self *Loop) StartAtomicUpdate() {
+	if self.atomic_update_active {
+		self.EndAtomicUpdate()
+	}
 	self.QueueWriteString(PENDING_UPDATE.EscapeCodeToSet())
+	self.atomic_update_active = true
 }
 
+func (self *Loop) IsAtomicUpdateActive() bool { return self.atomic_update_active }
+
 func (self *Loop) EndAtomicUpdate() {
-	self.QueueWriteString(PENDING_UPDATE.EscapeCodeToReset())
+	if self.atomic_update_active {
+		self.QueueWriteString(PENDING_UPDATE.EscapeCodeToReset())
+		self.atomic_update_active = false
+	}
 }
 
 func (self *Loop) SetCursorShape(shape CursorShapes, blink bool) {
@@ -380,4 +390,18 @@ func (self *Loop) SendOverlayReady() {
 func (self *Loop) Quit(exit_code int) {
 	self.exit_code = exit_code
 	self.keep_going = false
+}
+
+type DefaultColor int
+
+const (
+	BACKGROUND   DefaultColor = 11
+	FOREGROUND                = 10
+	CURSOR                    = 12
+	SELECTION_BG              = 17
+	SELECTION_FG              = 19
+)
+
+func (self *Loop) SetDefaultColor(which DefaultColor, val style.RGBA) {
+	self.QueueWriteString(fmt.Sprintf("\033]%d;%s\033\\", int(which), val.AsRGBSharp()))
 }

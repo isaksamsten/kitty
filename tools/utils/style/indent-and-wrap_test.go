@@ -12,7 +12,7 @@ func TestFormatWithIndent(t *testing.T) {
 	screen_width := 11
 
 	tx := func(text string, expected ...string) {
-		q := indent + strings.Join(expected, "") + "\n"
+		q := indent + strings.Join(expected, "")
 		actual := WrapText(text, indent, screen_width)
 		if actual != q {
 			t.Fatalf("%#v\nexpected: %#v\nactual:   %#v", text, q, actual)
@@ -31,5 +31,16 @@ func TestFormatWithIndent(t *testing.T) {
 	tx(
 		"\x1b[31;4:3m\x1b]8;;XXX\x1b\\combined using\x1b]8;;\x1b\\ operators",
 		"\x1b[31;4:3m\x1b]8;;XXX\x1b\\combined\n\x1b[4:0;39m\x1b]8;;\x1b\\__\x1b[4:3;31m\x1b]8;;XXX\x1b\\using\x1b]8;;\x1b\\\n\x1b[4:0;39m__\x1b[4:3;31moperators")
+	indent = ""
+	screen_width = 3
+	tx("one", "one")
+	tx("four", "fou\nr")
+	tx("nl\n\n", "nl\n\n")
+	tx("four\n\n", "fou\nr\n\n")
 
+	screen_width = 8
+	tx(
+		"\x1b[1mbold\x1b[221m no more bold",
+		"\x1b[1mbold\x1b[221m no\nmore\nbold",
+	)
 }

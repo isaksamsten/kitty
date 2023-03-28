@@ -7,7 +7,9 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
+	"kitty/tools/utils"
 	"kitty/tools/wcswidth"
 )
 
@@ -63,62 +65,71 @@ func (self *sgr_state) reset() {
 }
 
 func (self sgr_state) as_sgr(for_close bool) string {
-	ans := make([]string, 0, 4)
+	ans := make([]byte, 0, 32)
 	if for_close {
-		if self.bold || self.dim {
-			ans = append(ans, "22")
+		if self.bold {
+			ans = append(ans, "221;"...)
+		}
+		if self.dim {
+			ans = append(ans, "222;"...)
 		}
 		if self.italic {
-			ans = append(ans, "23")
+			ans = append(ans, "23;"...)
 		}
 		if self.reverse {
-			ans = append(ans, "27")
+			ans = append(ans, "27;"...)
 		}
 		if self.strikethrough {
-			ans = append(ans, "29")
+			ans = append(ans, "29;"...)
 		}
 		if self.underline_style != no_underline && self.underline_style != nil_underline {
-			ans = append(ans, "4:0")
+			ans = append(ans, "4:0;"...)
 		}
 		if self.fg.number != 0 {
-			ans = append(ans, "39")
+			ans = append(ans, "39;"...)
 		}
 		if self.bg.number != 0 {
-			ans = append(ans, "49")
+			ans = append(ans, "49;"...)
 		}
 		if self.uc.number != 0 {
-			ans = append(ans, "59")
+			ans = append(ans, "59;"...)
 		}
 	} else {
 		if self.bold {
-			ans = append(ans, "1")
+			ans = append(ans, "1;"...)
 		}
 		if self.dim {
-			ans = append(ans, "2")
+			ans = append(ans, "2;"...)
 		}
 		if self.italic {
-			ans = append(ans, "3")
+			ans = append(ans, "3;"...)
 		}
 		if self.reverse {
-			ans = append(ans, "7")
+			ans = append(ans, "7;"...)
 		}
 		if self.strikethrough {
-			ans = append(ans, "9")
+			ans = append(ans, "9;"...)
 		}
 		if self.underline_style != no_underline && self.underline_style != nil_underline {
-			ans = append(ans, fmt.Sprintf("4:%d", self.underline_style))
+			ans = append(ans, fmt.Sprintf("4:%d;", self.underline_style)...)
 		}
 		if q := self.fg.as_sgr(30); q != "" {
-			ans = append(ans, q)
+			ans = append(ans, q...)
+			ans = append(ans, ';')
 		}
 		if q := self.bg.as_sgr(40); q != "" {
-			ans = append(ans, q)
+			ans = append(ans, q...)
+			ans = append(ans, ';')
 		}
 		if q := self.uc.as_sgr(50); q != "" {
-			ans = append(ans, q)
+			ans = append(ans, q...)
+			ans = append(ans, ';')
 		}
 	}
-	return strings.Join(ans, ";")
+	if len(ans) > 0 {
+		ans = ans[:len(ans)-1]
+	}
+	return utils.UnsafeBytesToString(ans)
 }
 
 func (self sgr_state) as_escape_codes(for_close bool) string {
@@ -156,8 +167,12 @@ func (self *sgr_state) apply_csi(raw string) {
 			self.reset()
 		case 1:
 			self.dim, self.bold = false, true
+		case 221:
+			self.bold = false
 		case 2:
 			self.dim, self.bold = true, false
+		case 222:
+			self.dim = false
 		case 22:
 			self.dim, self.bold = false, false
 		case 3:
@@ -246,12 +261,12 @@ func (self hyperlink_state) as_escape_codes(for_close bool) string {
 }
 
 type line_builder struct {
-	buf                       strings.Builder
+	buf                       []byte
 	last_text_pos, cursor_pos int
 }
 
 func (self *line_builder) reset() string {
-	ans := self.buf.String()
+	ans := string(self.buf)
 	if len(ans) > self.last_text_pos {
 		prefix := ans[:self.last_text_pos]
 		suffix := ans[self.last_text_pos:]
@@ -262,15 +277,9 @@ func (self *line_builder) reset() string {
 	} else {
 		ans = strings.TrimRightFunc(ans, unicode.IsSpace)
 	}
-	sz := self.buf.Len()
-	self.buf.Reset()
+	self.buf = self.buf[:0]
 	self.last_text_pos = 0
 	self.cursor_pos = 0
-	if sz > 1024 {
-		self.buf.Grow(sz)
-	} else {
-		self.buf.Grow(1024)
-	}
 	return ans
 }
 
@@ -279,25 +288,25 @@ func (self *line_builder) has_space_for_width(w, max_width int) bool {
 }
 
 func (self *line_builder) add_char(ch rune) {
-	self.buf.WriteRune(ch)
-	self.last_text_pos = self.buf.Len()
+	self.buf = utf8.AppendRune(self.buf, ch)
+	self.last_text_pos = len(self.buf)
 	self.cursor_pos += wcswidth.Runewidth(ch)
 }
 
-func (self *line_builder) add_word(word string, width int) {
-	self.buf.WriteString(word)
-	self.last_text_pos = self.buf.Len()
+func (self *line_builder) add_word(word []byte, width int) {
+	self.buf = append(self.buf, word...)
+	self.last_text_pos = len(self.buf)
 	self.cursor_pos += width
 }
 
 func (self *line_builder) add_escape_code(code string) {
-	self.buf.WriteString(code)
+	self.buf = append(self.buf, code...)
 }
 
 func (self *line_builder) add_escape_code2(prefix string, body []byte, suffix string) {
-	self.buf.WriteString(prefix)
-	self.buf.Write(body)
-	self.buf.WriteString(suffix)
+	self.buf = append(self.buf, prefix...)
+	self.buf = append(self.buf, body...)
+	self.buf = append(self.buf, suffix...)
 }
 
 type escape_code_ struct {
@@ -305,47 +314,48 @@ type escape_code_ struct {
 }
 
 type word_builder struct {
-	buf                 strings.Builder
+	buf                 []byte
 	escape_codes        []escape_code_
 	text_start_position int
+	wcswidth            *wcswidth.WCWidthIterator
 }
 
-func (self *word_builder) reset() string {
-	ans := self.buf.String()
-	sz := self.buf.Len()
-	if sz < 64 {
-		sz = 64
-	}
-	self.buf.Reset()
-	self.buf.Grow(sz)
+func (self *word_builder) reset(copy_current_word func([]byte)) {
+	copy_current_word(self.buf)
+	self.buf = self.buf[:0]
 	self.escape_codes = self.escape_codes[:0]
 	self.text_start_position = 0
-	return ans
+	self.wcswidth.Reset()
 }
 
 func (self *word_builder) is_empty() bool {
-	return self.buf.Len() == 0
+	return len(self.buf) == 0
 }
 
 func (self *word_builder) width() int {
-	return wcswidth.Stringwidth(self.buf.String())
+	return self.wcswidth.CurrentWidth()
 }
 
 func (self *word_builder) add_escape_code(prefix string, body []byte, suffix string) {
 	e := escape_code_{prefix: prefix, body: string(body), suffix: suffix}
 	self.escape_codes = append(self.escape_codes, e)
-	self.buf.WriteString(prefix)
-	self.buf.Write(body)
-	self.buf.WriteString(suffix)
+	self.buf = append(self.buf, prefix...)
+	self.buf = append(self.buf, body...)
+	self.buf = append(self.buf, suffix...)
 }
 
 func (self *word_builder) has_text() bool { return self.text_start_position != 0 }
 
+func (self *word_builder) recalculate_width() {
+	self.wcswidth.Reset()
+	self.wcswidth.Parse(self.buf)
+}
+
 func (self *word_builder) trim_leading_spaces() {
-	if self.buf.Len() == 0 {
+	if self.is_empty() {
 		return
 	}
-	s := self.buf.String()
+	s := utils.UnsafeBytesToString(self.buf)
 	var before, after string
 	if self.text_start_position != 0 {
 		before, after = s[:self.text_start_position-1], s[self.text_start_position-1:]
@@ -354,19 +364,30 @@ func (self *word_builder) trim_leading_spaces() {
 	}
 	q := strings.TrimLeftFunc(after, unicode.IsSpace)
 	if q != after {
-		self.buf.Reset()
-		self.buf.Grow(len(before) + len(q))
-		self.buf.WriteString(before)
-		self.buf.WriteString(q)
+		self.buf = make([]byte, 0, len(s))
+		self.buf = append(self.buf, before...)
+		self.buf = append(self.buf, q...)
 		self.text_start_position = len(before) + 1
+		self.recalculate_width()
 	}
 }
 
-func (self *word_builder) add_rune(ch rune) {
-	self.buf.WriteRune(ch)
-	if self.text_start_position == 0 {
-		self.text_start_position = self.buf.Len()
+func (self *word_builder) add_rune(ch rune) (num_bytes_written int) {
+	before := len(self.buf)
+	self.buf = utf8.AppendRune(self.buf, ch)
+	num_bytes_written = len(self.buf) - before
+	for _, b := range self.buf[before:] {
+		self.wcswidth.ParseByte(b)
 	}
+	if self.text_start_position == 0 {
+		self.text_start_position = len(self.buf)
+	}
+	return
+}
+
+func (self *word_builder) remove_trailing_bytes(n int) {
+	self.buf = self.buf[:len(self.buf)-n]
+	self.recalculate_width()
 }
 
 type wrapper struct {
@@ -385,7 +406,7 @@ type wrapper struct {
 func (self *wrapper) newline_prefix() {
 	self.current_line.add_escape_code(self.sgr.as_escape_codes(true))
 	self.current_line.add_escape_code(self.hyperlink.as_escape_codes(true))
-	self.current_line.add_word(self.indent, self.indent_width)
+	self.current_line.add_word(utils.UnsafeStringToBytes(self.indent), self.indent_width)
 	self.current_line.add_escape_code(self.sgr.as_escape_codes(false))
 	self.current_line.add_escape_code(self.hyperlink.as_escape_codes(false))
 }
@@ -422,7 +443,9 @@ func (self *wrapper) print_word() {
 			self.sgr.apply_csi(e.body)
 		}
 	}
-	self.current_line.add_word(self.current_word.reset(), w)
+	self.current_word.reset(func(word []byte) {
+		self.current_line.add_word(word, w)
+	})
 }
 
 func (self *wrapper) handle_rune(ch rune) error {
@@ -433,7 +456,12 @@ func (self *wrapper) handle_rune(ch rune) error {
 		self.print_word()
 		self.current_line.add_char(ch)
 	} else {
-		self.current_word.add_rune(ch)
+		num_of_bytes_written := self.current_word.add_rune(ch)
+		if self.current_word.width() > self.width {
+			self.current_word.remove_trailing_bytes(num_of_bytes_written)
+			self.print_word()
+			return self.handle_rune(ch)
+		}
 	}
 	return nil
 }
@@ -453,9 +481,9 @@ func (self *wrapper) wrap_text(text string) []string {
 		return []string{""}
 	}
 	self.current_line.reset()
-	self.current_word.reset()
+	self.current_word.reset(func([]byte) {})
 	self.lines = self.lines[:0]
-	self.current_line.add_word(self.indent, self.indent_width)
+	self.current_line.add_word(utils.UnsafeStringToBytes(self.indent), self.indent_width)
 	self.ep.ParseString(text)
 	if !self.current_word.is_empty() {
 		self.print_word()
@@ -466,17 +494,21 @@ func (self *wrapper) wrap_text(text string) []string {
 	if last_line == self.current_line.reset() {
 		last_line = ""
 	}
-	self.append_line(last_line)
+	if last_line != "" {
+		self.append_line(last_line)
+	}
 	return self.lines
 }
 
 func new_wrapper(indent string, width int) *wrapper {
+	width = utils.Max(2, width)
 	ans := wrapper{indent: indent, width: width, indent_width: wcswidth.Stringwidth(indent)}
 	ans.ep.HandleRune = ans.handle_rune
 	ans.ep.HandleCSI = ans.handle_csi
 	ans.ep.HandleOSC = ans.handle_osc
 	ans.lines = make([]string, 0, 32)
 	ans.current_word.escape_codes = make([]escape_code_, 0, 8)
+	ans.current_word.wcswidth = wcswidth.CreateWCWidthIterator()
 	return &ans
 }
 

@@ -13,7 +13,19 @@ import tarfile
 from contextlib import contextmanager, suppress
 from functools import lru_cache
 from itertools import chain
-from typing import Any, BinaryIO, Dict, Iterator, List, Optional, Sequence, Set, TextIO, Tuple, Union
+from typing import (
+    Any,
+    BinaryIO,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    TextIO,
+    Tuple,
+    Union,
+)
 
 import kitty.constants as kc
 from kittens.tui.operations import Mode
@@ -27,7 +39,7 @@ from kitty.cli import (
 )
 from kitty.conf.generate import gen_go_code
 from kitty.conf.types import Definition
-from kitty.guess_mime_type import text_mimes
+from kitty.guess_mime_type import known_extensions, text_mimes
 from kitty.key_encoding import config_mod_map
 from kitty.key_names import character_key_name_aliases, functional_key_name_aliases
 from kitty.options.types import Options
@@ -324,7 +336,7 @@ def wrapped_kittens() -> Sequence[str]:
 
 
 def generate_conf_parser(kitten: str, defn: Definition) -> None:
-    with replace_if_needed(f'tools/cmd/{kitten}/conf_generated.go'):
+    with replace_if_needed(f'kittens/{kitten}/conf_generated.go'):
         print(f'package {kitten}')
         print(gen_go_code(defn))
 
@@ -358,11 +370,11 @@ def kitten_clis() -> None:
         ecp = get_kitten_extra_cli_parsers(kitten)
         if ecp:
             for name, spec in ecp.items():
-                with replace_if_needed(f'tools/cmd/{kitten}/{name}_cli_generated.go'):
+                with replace_if_needed(f'kittens/{kitten}/{name}_cli_generated.go'):
                     print(f'package {kitten}')
                     generate_extra_cli_parser(name, spec)
 
-        with replace_if_needed(f'tools/cmd/{kitten}/cli_generated.go'):
+        with replace_if_needed(f'kittens/{kitten}/cli_generated.go'):
             od = []
             kcd = kitten_cli_docs(kitten)
             has_underscore = '_' in kitten
@@ -494,10 +506,11 @@ var DocTitleMap = map[string]string{serialize_go_dict(ref_map['doc'])}
 var AllowedShellIntegrationValues = []string{{ {str(sorted(allowed_shell_integration_values))[1:-1].replace("'", '"')} }}
 var KittyConfigDefaults = struct {{
 Term, Shell_integration, Select_by_word_characters string
+Wheel_scroll_multiplier int
 Url_prefixes []string
 }}{{
 Term: "{Options.term}", Shell_integration: "{' '.join(Options.shell_integration)}", Url_prefixes: []string{{ {url_prefixes} }},
-Select_by_word_characters: `{Options.select_by_word_characters}`,
+Select_by_word_characters: `{Options.select_by_word_characters}`, Wheel_scroll_multiplier: {Options.wheel_scroll_multiplier},
 }}
 '''  # }}}
 
@@ -673,6 +686,10 @@ def generate_textual_mimetypes() -> str:
     for k in text_mimes:
         ans.append(f'  "{serialize_as_go_string(k)}": true,')
     ans.append('}')
+    ans.append('var KnownExtensions = map[string]string{')
+    for k, v in known_extensions.items():
+        ans.append(f'  ".{serialize_as_go_string(k)}": "{serialize_as_go_string(v)}",')
+    ans.append('}')
     return '\n'.join(ans)
 
 
@@ -706,7 +723,7 @@ def generate_ssh_kitten_data() -> None:
         for f in filenames:
             path = os.path.join(dirpath, f)
             files.add(path.replace(os.sep, '/'))
-    dest = 'tools/cmd/ssh/data_generated.bin'
+    dest = 'kittens/ssh/data_generated.bin'
 
     def normalize(t: tarfile.TarInfo) -> tarfile.TarInfo:
         t.uid = t.gid = 0

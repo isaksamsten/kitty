@@ -8,32 +8,14 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"strings"
 
 	"kitty/tools/tui/loop"
 	"kitty/tools/utils"
-	"kitty/tools/utils/shm"
 )
 
 var _ = fmt.Print
-
-const TempTemplate = "kitty-tty-graphics-protocol-*"
-
-func CreateTemp() (*os.File, error) {
-	return os.CreateTemp("", TempTemplate)
-}
-
-func CreateTempInRAM() (*os.File, error) {
-	if shm.SHM_DIR != "" {
-		f, err := os.CreateTemp(shm.SHM_DIR, TempTemplate)
-		if err == nil {
-			return f, err
-		}
-	}
-	return CreateTemp()
-}
 
 // Enums {{{
 type GRT_a int
@@ -515,7 +497,11 @@ func (self *GraphicsCommand) serialize_non_default_fields() (ans []string) {
 }
 
 func (self GraphicsCommand) String() string {
-	return "GraphicsCommand(" + strings.Join(self.serialize_non_default_fields(), ", ") + ")"
+	ans := "GraphicsCommand(" + strings.Join(self.serialize_non_default_fields(), ", ")
+	if self.response_message != "" {
+		ans += fmt.Sprintf(", response=%#v", self.response_message)
+	}
+	return ans + ")"
 }
 
 func (self *GraphicsCommand) serialize_to(buf io.StringWriter, chunk string) (err error) {
@@ -936,15 +922,6 @@ func (self *GraphicsCommand) TopEdge() uint64 {
 
 func (self *GraphicsCommand) SetTopEdge(y uint64) *GraphicsCommand {
 	self.y = y
-	return self
-}
-
-func (self *GraphicsCommand) SourceLeftEdge() uint64 {
-	return self.X
-}
-
-func (self *GraphicsCommand) SetSourceLeftEdge(x uint64) *GraphicsCommand {
-	self.X = x
 	return self
 }
 
