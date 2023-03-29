@@ -261,25 +261,26 @@ func (self hyperlink_state) as_escape_codes(for_close bool) string {
 }
 
 type line_builder struct {
-	buf                       []byte
-	last_text_pos, cursor_pos int
+	buf                        []byte
+	cursor_pos                 int
+	seen_non_space_chars       bool
+	pos_of_trailing_whitespace int
 }
 
-func (self *line_builder) reset() string {
+func (self *line_builder) reset(trim_whitespace bool) string {
 	ans := string(self.buf)
-	if len(ans) > self.last_text_pos {
-		prefix := ans[:self.last_text_pos]
-		suffix := ans[self.last_text_pos:]
-		prefix = strings.TrimRightFunc(prefix, unicode.IsSpace)
-		if len(prefix) != self.last_text_pos {
-			ans = prefix + suffix
+	if trim_whitespace && self.pos_of_trailing_whitespace > -1 {
+		prefix := ans[:self.pos_of_trailing_whitespace]
+		tp := strings.TrimRightFunc(prefix, is_space)
+		if len(tp) != len(prefix) {
+			ans = tp + ans[self.pos_of_trailing_whitespace:]
 		}
-	} else {
-		ans = strings.TrimRightFunc(ans, unicode.IsSpace)
+
 	}
 	self.buf = self.buf[:0]
-	self.last_text_pos = 0
 	self.cursor_pos = 0
+	self.seen_non_space_chars = false
+	self.pos_of_trailing_whitespace = -1
 	return ans
 }
 
@@ -288,15 +289,32 @@ func (self *line_builder) has_space_for_width(w, max_width int) bool {
 }
 
 func (self *line_builder) add_char(ch rune) {
+	self.seen_non_space_chars = true
 	self.buf = utf8.AppendRune(self.buf, ch)
-	self.last_text_pos = len(self.buf)
 	self.cursor_pos += wcswidth.Runewidth(ch)
+	self.pos_of_trailing_whitespace = -1
+}
+
+func (self *line_builder) add_space(ch rune, trim_whitespace bool) {
+	if !trim_whitespace || self.seen_non_space_chars {
+		self.buf = utf8.AppendRune(self.buf, ch)
+		self.pos_of_trailing_whitespace = len(self.buf)
+		self.cursor_pos += wcswidth.Runewidth(ch)
+	}
 }
 
 func (self *line_builder) add_word(word []byte, width int) {
+	self.seen_non_space_chars = true
+	self.pos_of_trailing_whitespace = -1
 	self.buf = append(self.buf, word...)
-	self.last_text_pos = len(self.buf)
 	self.cursor_pos += width
+}
+
+func (self *line_builder) add_indent(word string, width int) {
+	if word != "" {
+		self.buf = append(self.buf, word...)
+		self.cursor_pos += width
+	}
 }
 
 func (self *line_builder) add_escape_code(code string) {
@@ -351,27 +369,6 @@ func (self *word_builder) recalculate_width() {
 	self.wcswidth.Parse(self.buf)
 }
 
-func (self *word_builder) trim_leading_spaces() {
-	if self.is_empty() {
-		return
-	}
-	s := utils.UnsafeBytesToString(self.buf)
-	var before, after string
-	if self.text_start_position != 0 {
-		before, after = s[:self.text_start_position-1], s[self.text_start_position-1:]
-	} else {
-		after = s
-	}
-	q := strings.TrimLeftFunc(after, unicode.IsSpace)
-	if q != after {
-		self.buf = make([]byte, 0, len(s))
-		self.buf = append(self.buf, before...)
-		self.buf = append(self.buf, q...)
-		self.text_start_position = len(before) + 1
-		self.recalculate_width()
-	}
-}
-
 func (self *word_builder) add_rune(ch rune) (num_bytes_written int) {
 	before := len(self.buf)
 	self.buf = utf8.AppendRune(self.buf, ch)
@@ -394,6 +391,7 @@ type wrapper struct {
 	ep                  wcswidth.EscapeCodeParser
 	indent              string
 	width, indent_width int
+	trim_whitespace     bool
 
 	sgr                     sgr_state
 	hyperlink               hyperlink_state
@@ -406,7 +404,7 @@ type wrapper struct {
 func (self *wrapper) newline_prefix() {
 	self.current_line.add_escape_code(self.sgr.as_escape_codes(true))
 	self.current_line.add_escape_code(self.hyperlink.as_escape_codes(true))
-	self.current_line.add_word(utils.UnsafeStringToBytes(self.indent), self.indent_width)
+	self.current_line.add_indent(self.indent, self.indent_width)
 	self.current_line.add_escape_code(self.sgr.as_escape_codes(false))
 	self.current_line.add_escape_code(self.hyperlink.as_escape_codes(false))
 }
@@ -421,7 +419,7 @@ func (self *wrapper) append_line(line string) {
 }
 
 func (self *wrapper) end_current_line() {
-	line := self.current_line.reset()
+	line := self.current_line.reset(self.trim_whitespace)
 	if strings.HasSuffix(line, self.indent) && wcswidth.Stringwidth(line) == self.indent_width {
 		line = line[:len(line)-len(self.indent)]
 	}
@@ -433,7 +431,6 @@ func (self *wrapper) print_word() {
 	w := self.current_word.width()
 	if !self.current_line.has_space_for_width(w, self.width) {
 		self.end_current_line()
-		self.current_word.trim_leading_spaces()
 		w = self.current_word.width()
 	}
 	for _, e := range self.current_word.escape_codes {
@@ -448,13 +445,22 @@ func (self *wrapper) print_word() {
 	})
 }
 
+func is_space(ch rune) bool {
+	return ch != 0xa0 && unicode.IsSpace(ch)
+}
+
 func (self *wrapper) handle_rune(ch rune) error {
 	if ch == '\n' {
 		self.print_word()
 		self.end_current_line()
-	} else if self.current_word.has_text() && ch != 0xa0 && unicode.IsSpace(ch) {
-		self.print_word()
-		self.current_line.add_char(ch)
+	} else if is_space(ch) {
+		if self.current_word.has_text() {
+			self.print_word()
+		}
+		if self.current_line.cursor_pos >= self.width {
+			self.end_current_line()
+		}
+		self.current_line.add_space(ch, self.trim_whitespace)
 	} else {
 		num_of_bytes_written := self.current_word.add_rune(ch)
 		if self.current_word.width() > self.width {
@@ -480,18 +486,18 @@ func (self *wrapper) wrap_text(text string) []string {
 	if text == "" {
 		return []string{""}
 	}
-	self.current_line.reset()
+	self.current_line.reset(self.trim_whitespace)
 	self.current_word.reset(func([]byte) {})
 	self.lines = self.lines[:0]
-	self.current_line.add_word(utils.UnsafeStringToBytes(self.indent), self.indent_width)
+	self.current_line.add_indent(self.indent, self.indent_width)
 	self.ep.ParseString(text)
 	if !self.current_word.is_empty() {
 		self.print_word()
 	}
 	self.end_current_line()
-	last_line := self.current_line.reset()
+	last_line := self.current_line.reset(self.trim_whitespace)
 	self.newline_prefix()
-	if last_line == self.current_line.reset() {
+	if last_line == self.current_line.reset(self.trim_whitespace) {
 		last_line = ""
 	}
 	if last_line != "" {
@@ -500,9 +506,12 @@ func (self *wrapper) wrap_text(text string) []string {
 	return self.lines
 }
 
-func new_wrapper(indent string, width int) *wrapper {
+func new_wrapper(opts WrapOptions, width int) *wrapper {
 	width = utils.Max(2, width)
-	ans := wrapper{indent: indent, width: width, indent_width: wcswidth.Stringwidth(indent)}
+	ans := wrapper{indent: opts.Indent, width: width, trim_whitespace: opts.Trim_whitespace, indent_width: wcswidth.Stringwidth(opts.Indent)}
+	if opts.Ignore_lines_containing != "" {
+		ans.ignore_lines_containing = utils.Splitlines(opts.Ignore_lines_containing)
+	}
 	ans.ep.HandleRune = ans.handle_rune
 	ans.ep.HandleCSI = ans.handle_csi
 	ans.ep.HandleOSC = ans.handle_osc
@@ -512,12 +521,17 @@ func new_wrapper(indent string, width int) *wrapper {
 	return &ans
 }
 
-func WrapTextAsLines(text string, indent string, width int, ignore_lines_containing ...string) []string {
-	w := new_wrapper(indent, width)
-	w.ignore_lines_containing = ignore_lines_containing
+type WrapOptions struct {
+	Ignore_lines_containing string
+	Trim_whitespace         bool   // trim whitespace at the start and end of lines (start is after indent).
+	Indent                  string // indent to add at the start of every line all formatting is cleared for the indent.
+}
+
+func WrapTextAsLines(text string, width int, opts WrapOptions) []string {
+	w := new_wrapper(opts, width)
 	return w.wrap_text(text)
 }
 
-func WrapText(text string, indent string, width int, ignore_lines_containing ...string) string {
-	return strings.Join(WrapTextAsLines(text, indent, width, ignore_lines_containing...), "\n")
+func WrapText(text string, width int, opts WrapOptions) string {
+	return strings.Join(WrapTextAsLines(text, width, opts), "\n")
 }
