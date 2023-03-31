@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"kitty/tools/config"
-	"kitty/tools/tty"
 	"kitty/tools/tui"
 	"kitty/tools/tui/graphics"
 	"kitty/tools/tui/loop"
@@ -56,6 +55,7 @@ type screen_size struct{ rows, columns, num_lines, cell_width, cell_height int }
 type Handler struct {
 	async_results                                       chan AsyncResult
 	mouse_selection                                     tui.MouseSelection
+	image_count                                         int
 	shortcut_tracker                                    config.ShortcutTracker
 	left, right                                         string
 	collection                                          *Collection
@@ -86,8 +86,6 @@ func (self *Handler) calculate_statistics() {
 	}
 }
 
-var DebugPrintln = tty.DebugPrintln
-
 func (self *Handler) update_screen_size(sz loop.ScreenSize) {
 	self.screen_size.rows = int(sz.HeightCells)
 	self.screen_size.columns = int(sz.WidthCells)
@@ -117,7 +115,6 @@ func (self *Handler) initialize() {
 	self.rl = readline.New(self.lp, readline.RlInit{DontMarkPrompts: true, Prompt: "/"})
 	self.lp.OnEscapeCode = self.on_escape_code
 	image_collection = graphics.NewImageCollection()
-	image_collection.Initialize(self.lp)
 	self.current_context_count = opts.Context
 	if self.current_context_count < 0 {
 		self.current_context_count = int(conf.Num_context_lines)
@@ -194,18 +191,23 @@ func (self *Handler) load_all_images() {
 	self.collection.Apply(func(path, item_type, changed_path string) error {
 		if path != "" && is_image(path) {
 			image_collection.AddPaths(path)
+			self.image_count++
 		}
 		if changed_path != "" && is_image(changed_path) {
 			image_collection.AddPaths(changed_path)
+			self.image_count++
 		}
 		return nil
 	})
-	go func() {
-		r := AsyncResult{rtype: IMAGE_LOAD}
-		image_collection.LoadAll()
-		self.async_results <- r
-		self.lp.WakeupMainThread()
-	}()
+	if self.image_count > 0 {
+		image_collection.Initialize(self.lp)
+		go func() {
+			r := AsyncResult{rtype: IMAGE_LOAD}
+			image_collection.LoadAll()
+			self.async_results <- r
+			self.lp.WakeupMainThread()
+		}()
+	}
 }
 
 func (self *Handler) resize_all_images_if_needed() {
@@ -219,7 +221,7 @@ func (self *Handler) resize_all_images_if_needed() {
 		Width:  available_cols * self.screen_size.cell_width,
 		Height: self.screen_size.num_lines * 2 * self.screen_size.cell_height,
 	}
-	if sz != self.images_resized_to {
+	if sz != self.images_resized_to && self.image_count > 0 {
 		go func() {
 			image_collection.ResizeForPageSize(sz.Width, sz.Height)
 			r := AsyncResult{rtype: IMAGE_RESIZE, page_size: sz}
@@ -319,23 +321,29 @@ func (self *Handler) draw_image(key string, num_rows, starting_row int) {
 }
 
 func (self *Handler) draw_image_pair(ll *LogicalLine, starting_row int) {
+	if ll.left_image.key == "" && ll.right_image.key == "" {
+		return
+	}
+	defer self.lp.QueueWriteString("\r")
 	if ll.left_image.key != "" {
+		self.lp.QueueWriteString("\r")
 		self.lp.MoveCursorHorizontally(self.logical_lines.margin_size)
 		self.draw_image(ll.left_image.key, ll.left_image.count, starting_row)
-		self.lp.QueueWriteString("\r")
 	}
 	if ll.right_image.key != "" {
+		self.lp.QueueWriteString("\r")
 		self.lp.MoveCursorHorizontally(self.logical_lines.margin_size + self.logical_lines.columns/2)
 		self.draw_image(ll.right_image.key, ll.right_image.count, starting_row)
-		self.lp.QueueWriteString("\r")
 	}
 }
 
 func (self *Handler) draw_screen() {
 	self.lp.StartAtomicUpdate()
 	defer self.lp.EndAtomicUpdate()
-	self.resize_all_images_if_needed()
-	image_collection.DeleteAllVisiblePlacements(self.lp)
+	if self.image_count > 0 {
+		self.resize_all_images_if_needed()
+		image_collection.DeleteAllVisiblePlacements(self.lp)
+	}
 	lp.MoveCursorTo(1, 1)
 	lp.ClearToEndOfScreen()
 	if self.logical_lines == nil || self.diff_map == nil || self.collection == nil {
@@ -346,7 +354,11 @@ func (self *Handler) draw_screen() {
 	seen_images := utils.NewSet[int]()
 	for num_written := 0; num_written < self.screen_size.num_lines; num_written++ {
 		ll := self.logical_lines.At(pos.logical_line)
-		is_image := ll != nil && ll.line_type == IMAGE_LINE
+		if ll == nil {
+			num_written--
+			continue
+		}
+		is_image := ll.line_type == IMAGE_LINE
 		ll.render_screen_line(pos.screen_line, lp, self.logical_lines.margin_size, self.logical_lines.columns)
 		if is_image && !seen_images.Has(pos.logical_line) && pos.screen_line >= ll.image_lines_offset {
 			seen_images.Add(pos.logical_line)
