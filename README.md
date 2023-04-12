@@ -12,9 +12,14 @@ This fork makes Kitty more usable on macOS without title bar enabled.
 
 ## Build
 
+First, if you are using `conda` run `conda deactivate` to ensure
+that you are using the system python to build.
+
 ```shell
 brew bundle
 LDFLAGS=-L/opt/homebrew/lib python3 setup.py  --extra-include-dirs /opt/homebrew/Cellar/librsync/{VERSION}/include
+pip3 install -r docs/requirements.txt
+LDFLAGS=-L/opt/homebrew/lib python3 setup.py kitty.app  --extra-include-dirs /opt/homebrew/Cellar/librsync/{VERSION}/include
 ```
 
 Move `kitty.app` to `/Applications`
