@@ -155,7 +155,7 @@ font_descriptor_from_python(PyObject *src) {
 static CTFontCollectionRef all_fonts_collection_data = NULL;
 
 static CTFontCollectionRef
-all_fonts_collection(void) {
+all_fonts_collection() {
     if (all_fonts_collection_data == NULL) all_fonts_collection_data = CTFontCollectionCreateFromAvailableFonts(NULL);
     return all_fonts_collection_data;
 }
