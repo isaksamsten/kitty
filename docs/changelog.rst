@@ -38,9 +38,13 @@ Detailed list of changes
 0.28.0 [future]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- Text rendering: Use sRGB correct linear gamma blending for nicer font rendering and better color accuracy with transparent windows. See the option :opt:`text_composition_strategy` for details. The obsolete :opt:`macos_thicken_font` will make the font too thick and needs to be removed manually if it is configured. (:pull:`5969`)
+- **Text rendering change**: Use sRGB correct linear gamma blending for nicer font
+  rendering and better color accuracy with transparent windows.
+  See the option :opt:`text_composition_strategy` for details.
+  The obsolete :opt:`macos_thicken_font` will make the font too thick and needs to be removed manually
+  if it is configured. (:pull:`5969`)
 
-- icat kitten: Support display of images inside tmux (:pull:`5664`)
+- icat kitten: Support display of images inside tmux >= 3.3 (:pull:`5664`)
 
 - Graphics protocol: Add support for displaying images inside programs that do not support the protocol such as vim and tmux (:pull:`5664`)
 
@@ -87,6 +91,8 @@ Detailed list of changes
 - Allow stopping of URL detection at newlines via :opt:`url_excluded_characters` (:iss:`6122`)
 
 - Linux Wayland: Fix animated images not being animated continuously (:iss:`6126`)
+
+- Keyboard input: Fix text not being reported as unicode codepoints for multi-byte characters in the kitty keyboard protocol (:iss:`6167`)
 
 
 0.27.1 [2023-02-07]

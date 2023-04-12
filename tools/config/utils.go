@@ -9,6 +9,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 )
 
 var _ = fmt.Print
@@ -227,7 +230,7 @@ func NormalizeShortcut(spec string) string {
 		}
 		return ans
 	}, mods)
-	utils.Sort(mods, func(a, b string) bool { return a < b })
+	slices.Sort(mods)
 	return strings.Join(mods, "+") + "+" + key
 }
 
@@ -246,12 +249,18 @@ type KeyAction struct {
 	Args            string
 }
 
+func (self *KeyAction) String() string {
+	return fmt.Sprintf("map %#v %#v %#v\n", strings.Join(self.Normalized_keys, ">"), self.Name, self.Args)
+}
+
 func ParseMap(val string) (*KeyAction, error) {
 	spec, action, found := strings.Cut(val, " ")
 	if !found {
 		return nil, fmt.Errorf("No action specified for shortcut %s", val)
 	}
+	action = strings.TrimSpace(action)
 	action_name, action_args, _ := strings.Cut(action, " ")
+	action_args = strings.TrimSpace(action_args)
 	return &KeyAction{Name: action_name, Args: action_args, Normalized_keys: NormalizeShortcuts(spec)}, nil
 }
 
@@ -287,4 +296,17 @@ func (self *ShortcutTracker) Match(ev *loop.KeyEvent, all_actions []*KeyAction) 
 		}
 	}
 	return nil
+}
+
+func ResolveShortcuts(actions []*KeyAction) []*KeyAction {
+	action_map := make(map[string]*KeyAction, len(actions))
+	for _, ac := range actions {
+		key := strings.Join(ac.Normalized_keys, "\x00")
+		if ac.Name == "no_op" || ac.Name == "no-op" {
+			delete(action_map, key)
+		} else {
+			action_map[key] = ac
+		}
+	}
+	return maps.Values(action_map)
 }
