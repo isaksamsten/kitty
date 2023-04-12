@@ -10,6 +10,15 @@ This fork makes Kitty more usable on macOS without title bar enabled.
 -   Center single tab
 -   Enable window buttons if `hide_window_decorations = titlebar-only`
 
+## Build
+
+```shell
+brew bundle
+LDFLAGS=-L/opt/homebrew/lib python3 setup.py  --extra-include-dirs /opt/homebrew/Cellar/librsync/{VERSION}/include
+```
+
+Move `kitty.app` to `/Applications`
+
 ## Configuration
 
 ```
