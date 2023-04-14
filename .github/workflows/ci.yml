@@ -1,13 +1,13 @@
 name: CI
 on: [push, pull_request]
 env:
-    CI: 'true'
+    CI: "true"
     ASAN_OPTIONS: leak_check_at_exit=0
     LC_ALL: en_US.UTF-8
     LANG: en_US.UTF-8
 
 permissions:
-  contents: read # to fetch code (actions/checkout)
+    contents: read # to fetch code (actions/checkout)
 
 jobs:
     linux:
@@ -34,7 +34,6 @@ jobs:
                       pyver: "3.9"
                       sanitize: 1
 
-
                 exclude:
                     - python: a
                       cc: clang
@@ -44,26 +43,26 @@ jobs:
                       cc: gcc
 
         steps:
-          - name: Checkout source code
-            uses: actions/checkout@v3
-            with:
-              fetch-depth: 10
+            - name: Checkout source code
+              uses: actions/checkout@v3
+              with:
+                  fetch-depth: 10
 
-          - name: Set up Python ${{ matrix.pyver }}
-            uses: actions/setup-python@v4
-            with:
-              python-version: ${{ matrix.pyver }}
+            - name: Set up Python ${{ matrix.pyver }}
+              uses: actions/setup-python@v4
+              with:
+                  python-version: ${{ matrix.pyver }}
 
-          - name: Install Go
-            uses: actions/setup-go@v3
-            with:
-              go-version-file: go.mod
+            - name: Install Go
+              uses: actions/setup-go@v3
+              with:
+                  go-version-file: go.mod
 
-          - name: Build kitty
-            run: python .github/workflows/ci.py build
+            - name: Build kitty
+              run: python .github/workflows/ci.py build
 
-          - name: Test kitty
-            run: python .github/workflows/ci.py test
+            - name: Test kitty
+              run: python .github/workflows/ci.py test
 
     linux-package:
         name: Linux package
@@ -71,53 +70,53 @@ jobs:
         env:
             CFLAGS: -funsigned-char
         steps:
-          - name: Checkout source code
-            uses: actions/checkout@v3
-            with:
-              fetch-depth: 0  # needed for :commit: docs role
+            - name: Checkout source code
+              uses: actions/checkout@v3
+              with:
+                  fetch-depth: 0 # needed for :commit: docs role
 
-          - name: Test for trailing whitespace
-            run: if grep -Inr '\s$' kitty kitty_tests kittens docs *.py *.asciidoc *.rst *.go .gitattributes .gitignore; then echo Trailing whitespace found, aborting.; exit 1; fi
+            - name: Test for trailing whitespace
+              run: if grep -Inr '\s$' kitty kitty_tests kittens docs *.py *.asciidoc *.rst *.go .gitattributes .gitignore; then echo Trailing whitespace found, aborting.; exit 1; fi
 
-          - name: Set up Python
-            uses: actions/setup-python@v4
-            with:
-              python-version: "3.10"
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.10"
 
-          - name: Install Go
-            uses: actions/setup-go@v3
-            with:
-              go-version-file: go.mod
+            - name: Install Go
+              uses: actions/setup-go@v3
+              with:
+                  go-version-file: go.mod
 
-          - name: Install build-only deps
-            run: python -m pip install -r docs/requirements.txt ruff mypy types-requests types-docutils
+            - name: Install build-only deps
+              run: python -m pip install -r docs/requirements.txt ruff mypy types-requests types-docutils
 
-          - name: Run ruff
-            run: ruff .
+            - name: Run ruff
+              run: ruff .
 
-          - name: Run gofmt
-            run: go version && python .github/workflows/ci.py gofmt
+            - name: Run gofmt
+              run: go version && python .github/workflows/ci.py gofmt
 
-          - name: Build kitty package
-            run: python .github/workflows/ci.py package
+            - name: Build kitty package
+              run: python .github/workflows/ci.py package
 
-          - name: Build kitty
-            run: python setup.py build --debug
+            - name: Build kitty
+              run: python setup.py build --debug
 
-          - name: Build static kitten
-            run: python setup.py build-static-binaries
+            - name: Build static kitten
+              run: python setup.py build-static-binaries
 
-          - name: Run mypy
-            run: which python && python -m mypy --version && ./test.py mypy
+            - name: Run mypy
+              run: which python && python -m mypy --version && ./test.py mypy
 
-          - name: Run go vet
-            run: go version && go vet ./...
+            - name: Run go vet
+              run: go version && go vet ./...
 
-          - name: Build man page
-            run: make FAIL_WARN=1 man
+            - name: Build man page
+              run: make FAIL_WARN=1 man
 
-          - name: Build HTML docs
-            run: make FAIL_WARN=1 html
+            - name: Build HTML docs
+              run: make FAIL_WARN=1 html
 
     bundle:
         name: Bundle test (${{ matrix.os }})
@@ -128,52 +127,63 @@ jobs:
         env:
             KITTY_BUNDLE: 1
         steps:
-          - name: Checkout source code
-            uses: actions/checkout@v3
-            with:
-              fetch-depth: 10
+            - name: Checkout source code
+              uses: actions/checkout@v3
+              with:
+                  fetch-depth: 10
 
-          - name: Install Go
-            uses: actions/setup-go@v3
-            with:
-              go-version-file: go.mod
+            - name: Install Go
+              uses: actions/setup-go@v3
+              with:
+                  go-version-file: go.mod
 
-          - name: Build kitty
-            run: which python3 && python3 .github/workflows/ci.py build
+            - name: Build kitty
+              run: which python3 && python3 .github/workflows/ci.py build
 
-          - name: Test kitty
-            run: python3 .github/workflows/ci.py test
+            - name: Test kitty
+              run: python3 .github/workflows/ci.py test
 
     brew:
         name: macOS Brew
         runs-on: macos-latest
         steps:
-          - name: Checkout source code
-            uses: actions/checkout@v3
-            with:
-              fetch-depth: 0  # needed for :commit: docs role
+            - name: Checkout source code
+              uses: actions/checkout@v3
+              with:
+                  fetch-depth: 0 # needed for :commit: docs role
 
-          - name: Set up Python
-            uses: actions/setup-python@v4
-            with:
-              python-version: "3.10"
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.10"
 
-          - name: Install Go
-            uses: actions/setup-go@v3
-            with:
-              go-version-file: go.mod
+            - name: Install Go
+              uses: actions/setup-go@v3
+              with:
+                  go-version-file: go.mod
 
-          - name: Build kitty
-            run: python3 .github/workflows/ci.py build
+            - name: Build kitty
+              run: python3 .github/workflows/ci.py build
 
-          - name: Test kitty
-            run: python3 .github/workflows/ci.py test
+            - name: Test kitty
+              run: python3 .github/workflows/ci.py test
 
-          - name: Install deps for docs
-            run: python3 -m pip install -r docs/requirements.txt
+            - name: Install deps for docs
+              run: python3 -m pip install -r docs/requirements.txt
 
-          - name: Builds docs
-            run: make FAIL_WARN=1 docs
+            - name: Builds docs
+              run: make FAIL_WARN=1 docs
 
-          - name: Build kitty package
-            run: python3 .github/workflows/ci.py package
+            - name: Build kitty package
+              run: python3 .github/workflows/ci.py package
+
+            - uses: actions/upload-artifact@v3
+              with:
+                  path: kitty.app
+
+            - uses: ncipollo/release-action@v1
+              with:
+                  artifacts: "kitty.app"
+                  allowUpdates: true
+                  name: Latest CI build
+                  prerelease: true
