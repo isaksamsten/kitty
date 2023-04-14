@@ -7,7 +7,7 @@ env:
     LANG: en_US.UTF-8
 
 permissions:
-    contents: read # to fetch code (actions/checkout)
+    contents: write # to fetch code (actions/checkout)
 
 jobs:
     linux:
@@ -175,15 +175,15 @@ jobs:
               run: make FAIL_WARN=1 docs
 
             - name: Build kitty package
-              run: python3 .github/workflows/ci.py package
+              run: |
+                  python3 .github/workflows/ci.py package
+                  zip -r kitty.zip kitty.app
 
             - uses: actions/upload-artifact@v3
               with:
-                  path: kitty.app
-
-            - uses: ncipollo/release-action@v1
+                  path: kitty.zip
+            - uses: softprops/action-gh-release@v1
               with:
-                  artifacts: "kitty.app"
-                  allowUpdates: true
+                  files: kitty.zip
                   name: Latest CI build
                   prerelease: true
