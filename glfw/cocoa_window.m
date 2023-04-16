@@ -34,7 +34,13 @@
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #include <float.h>
 #include <string.h>
+#import <objc/runtime.h>
 
+@interface FakeView : NSView
+@end
+@implementation FakeView
+- (BOOL)fakeMouseDownCanMoveWindow { return YES; }
+@end
 
 static const char*
 polymorphic_string_as_utf8(id string) {
@@ -2600,16 +2606,9 @@ bool _glfwPlatformToggleFullscreen(_GLFWwindow* w, unsigned int flags) {
     }
     // Update window button visibility
     if (w->ns.titlebar_hidden) {
-        // The hidden buttons might be automatically reset to be visible after going full screen
-        // to show up in the auto-hide title bar, so they need to be set back to hidden.
-        BOOL button_hidden = YES;
-        // When title bar is configured to be hidden, it should be shown with buttons (auto-hide) after going to full screen.
-        if (!traditional) {
-            button_hidden = (BOOL) !made_fullscreen;
-        }
-        [[window standardWindowButton: NSWindowCloseButton] setHidden:button_hidden];
-        [[window standardWindowButton: NSWindowMiniaturizeButton] setHidden:button_hidden];
-        [[window standardWindowButton: NSWindowZoomButton] setHidden:button_hidden];
+        [[window standardWindowButton: NSWindowCloseButton] setHidden:NO];
+        [[window standardWindowButton: NSWindowMiniaturizeButton] setHidden:NO];
+        [[window standardWindowButton: NSWindowZoomButton] setHidden:NO];
     }
     return made_fullscreen;
 }
@@ -2924,15 +2923,12 @@ GLFWAPI void glfwHideCocoaTitlebar(GLFWwindow* handle, bool yes) {
     _GLFWwindow* w = (_GLFWwindow*) handle;
     NSWindow *window = w->ns.object;
     w->ns.titlebar_hidden = yes;
-    NSButton *button;
-    button = [window standardWindowButton: NSWindowCloseButton];
-    if (button) button.hidden = yes;
-    button = [window standardWindowButton: NSWindowMiniaturizeButton];
-    if (button) button.hidden = yes;
-    button = [window standardWindowButton: NSWindowZoomButton];
     [window setTitlebarAppearsTransparent:yes];
-    if (button) button.hidden = yes;
     if (yes) {
+        NSView* glView = [window contentView];
+        Method originalMethod = class_getInstanceMethod([glView class], @selector(mouseDownCanMoveWindow));
+        Method categoryMethod = class_getInstanceMethod(FakeView.class, @selector(fakeMouseDownCanMoveWindow));
+        method_exchangeImplementations(originalMethod, categoryMethod);
         [window setTitleVisibility:NSWindowTitleHidden];
         [window setStyleMask: [window styleMask] | NSWindowStyleMaskFullSizeContentView];
     } else {
