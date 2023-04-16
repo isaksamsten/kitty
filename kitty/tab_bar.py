@@ -108,7 +108,6 @@ def compile_template(template: str) -> Any:
 
 
 class ColorFormatter:
-
     draw_data: DrawData
     tab_data: TabBarData
 
@@ -145,17 +144,19 @@ class Formatter:
 @run_once
 def super_sub_maps() -> Tuple[Dict[int, int], Dict[int, int]]:
     import string
+
     sup_table = str.maketrans(
         string.ascii_lowercase + string.ascii_uppercase + string.digits + '+-=()',
-        'ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖqʳˢᵗᵘᵛʷˣʸᶻ' 'ᴬᴮᶜᴰᴱᶠᴳᴴᴵᴶᴷᴸᴹᴺᴼᴾQᴿˢᵀᵁⱽᵂˣʸᶻ' '⁰¹²³⁴⁵⁶⁷⁸⁹' '⁺⁻⁼⁽⁾')
+        'ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖqʳˢᵗᵘᵛʷˣʸᶻ' 'ᴬᴮᶜᴰᴱᶠᴳᴴᴵᴶᴷᴸᴹᴺᴼᴾQᴿˢᵀᵁⱽᵂˣʸᶻ' '⁰¹²³⁴⁵⁶⁷⁸⁹' '⁺⁻⁼⁽⁾',
+    )
     sub_table = str.maketrans(
         string.ascii_lowercase + string.ascii_uppercase + string.digits + '+-=()',
-        'ₐbcdₑfgₕᵢⱼₖₗₘₙₒₚqᵣₛₜᵤᵥwₓyz' 'ₐbcdₑfgₕᵢⱼₖₗₘₙₒₚqᵣₛₜᵤᵥwₓyz' '₀₁₂₃₄₅₆₇₈₉' '₊₋₌₍₎')
+        'ₐbcdₑfgₕᵢⱼₖₗₘₙₒₚqᵣₛₜᵤᵥwₓyz' 'ₐbcdₑfgₕᵢⱼₖₗₘₙₒₚqᵣₛₜᵤᵥwₓyz' '₀₁₂₃₄₅₆₇₈₉' '₊₋₌₍₎',
+    )
     return sup_table, sub_table
 
 
 class SupSub:
-
     def __init__(self, data: Dict[str, Any], is_subscript: bool = False):
         self.__data = data
         self.__is_subscript = is_subscript
@@ -189,14 +190,13 @@ def draw_attributed_string(title: str, screen: Screen) -> None:
 @lru_cache(maxsize=16)
 def template_has_field(template: str, field: str) -> bool:
     q = StringFormatter()
-    for (literal_text, field_name, format_spec, conversion) in q.parse(template):
+    for literal_text, field_name, format_spec, conversion in q.parse(template):
         if field_name and field in field_name.split():
             return True
     return False
 
 
 class TabAccessor:
-
     def __init__(self, tab_id: int):
         self.tab_id = tab_id
 
@@ -222,7 +222,15 @@ class TabAccessor:
 
 
 safe_builtins = {
-    'max': max, 'min': min, 'str': str, 'repr': repr, 'abs': abs, 'len': len, 'chr': chr, 'ord': ord, 're': re,
+    'max': max,
+    'min': min,
+    'str': str,
+    'repr': repr,
+    'abs': abs,
+    'len': len,
+    'chr': chr,
+    'ord': ord,
+    're': re,
 }
 
 
@@ -282,9 +290,7 @@ DrawTabFunc = Callable[[DrawData, Screen, TabBarData, int, int, int, bool, Extra
 
 
 def draw_tab_with_slant(
-    draw_data: DrawData, screen: Screen, tab: TabBarData,
-    before: int, max_tab_length: int, index: int, is_last: bool,
-    extra_data: ExtraData
+    draw_data: DrawData, screen: Screen, tab: TabBarData, before: int, max_tab_length: int, index: int, is_last: bool, extra_data: ExtraData
 ) -> int:
     orig_fg = screen.cursor.fg
     left_sep, right_sep = ('', '') if draw_data.tab_bar_edge == 'top' else ('', '')
@@ -325,9 +331,7 @@ def draw_tab_with_slant(
 
 
 def draw_tab_with_separator(
-    draw_data: DrawData, screen: Screen, tab: TabBarData,
-    before: int, max_tab_length: int, index: int, is_last: bool,
-    extra_data: ExtraData
+    draw_data: DrawData, screen: Screen, tab: TabBarData, before: int, max_tab_length: int, index: int, is_last: bool, extra_data: ExtraData
 ) -> int:
     if draw_data.leading_spaces:
         screen.draw(' ' * draw_data.leading_spaces)
@@ -351,9 +355,7 @@ def draw_tab_with_separator(
 
 
 def draw_tab_with_fade(
-    draw_data: DrawData, screen: Screen, tab: TabBarData,
-    before: int, max_tab_length: int, index: int, is_last: bool,
-    extra_data: ExtraData
+    draw_data: DrawData, screen: Screen, tab: TabBarData, before: int, max_tab_length: int, index: int, is_last: bool, extra_data: ExtraData
 ) -> int:
     orig_bg = screen.cursor.bg
     tab_bg = color_from_int(orig_bg >> 8)
@@ -383,16 +385,11 @@ def draw_tab_with_fade(
     return end
 
 
-powerline_symbols: Dict[PowerlineStyle, Tuple[str, str]] = {
-    'slanted': ('', '╱'),
-    'round': ('', '')
-}
+powerline_symbols: Dict[PowerlineStyle, Tuple[str, str]] = {'slanted': ('', '╱'), 'round': ('', '')}
 
 
 def draw_tab_with_powerline(
-    draw_data: DrawData, screen: Screen, tab: TabBarData,
-    before: int, max_tab_length: int, index: int, is_last: bool,
-    extra_data: ExtraData
+    draw_data: DrawData, screen: Screen, tab: TabBarData, before: int, max_tab_length: int, index: int, is_last: bool, extra_data: ExtraData
 ) -> int:
     tab_bg = screen.cursor.bg
     tab_fg = screen.cursor.fg
@@ -450,6 +447,7 @@ def draw_tab_with_powerline(
 def load_custom_draw_tab() -> DrawTabFunc:
     import runpy
     import traceback
+
     try:
         m = runpy.run_path(os.path.join(config_dir, 'tab_bar.py'))
         func: DrawTabFunc = m['draw_tab']
@@ -460,9 +458,7 @@ def load_custom_draw_tab() -> DrawTabFunc:
 
     @wraps(func)
     def draw_tab(
-        draw_data: DrawData, screen: Screen, tab: TabBarData,
-        before: int, max_tab_length: int, index: int, is_last: bool,
-        extra_data: ExtraData
+        draw_data: DrawData, screen: Screen, tab: TabBarData, before: int, max_tab_length: int, index: int, is_last: bool, extra_data: ExtraData
     ) -> int:
         try:
             return func(draw_data, screen, tab, before, max_tab_length, index, is_last, extra_data)
@@ -474,7 +470,6 @@ def load_custom_draw_tab() -> DrawTabFunc:
 
 
 class TabBar:
-
     def __init__(self, os_window_id: int):
         self.os_window_id = os_window_id
         self.num_tabs = 1
@@ -494,10 +489,7 @@ class TabBar:
         else:
             s = self.screen
         s.color_profile.update_ansi_color_table(build_ansi_color_table(opts))
-        s.color_profile.set_configured_colors(
-            color_as_int(opts.inactive_tab_foreground),
-            color_as_int(opts.tab_bar_background or opts.background)
-        )
+        s.color_profile.set_configured_colors(color_as_int(opts.inactive_tab_foreground), color_as_int(opts.tab_bar_background or opts.background))
         sep = opts.tab_separator
         self.trailing_spaces = self.leading_spaces = 0
         while sep and sep[0] == ' ':
@@ -513,10 +505,17 @@ class TabBar:
         self.active_bg = as_rgb(color_as_int(opts.active_tab_background))
         self.active_fg = as_rgb(color_as_int(opts.active_tab_foreground))
         self.draw_data = DrawData(
-            self.leading_spaces, self.sep, self.trailing_spaces, opts.bell_on_tab,
-            opts.tab_fade, opts.active_tab_foreground, opts.active_tab_background,
-            opts.inactive_tab_foreground, opts.inactive_tab_background,
-            opts.tab_bar_background or opts.background, opts.tab_title_template,
+            self.leading_spaces,
+            self.sep,
+            self.trailing_spaces,
+            opts.bell_on_tab,
+            opts.tab_fade,
+            opts.active_tab_foreground,
+            opts.active_tab_background,
+            opts.inactive_tab_foreground,
+            opts.inactive_tab_background,
+            opts.tab_bar_background or opts.background,
+            opts.tab_title_template,
             opts.active_tab_title_template,
             opts.tab_activity_symbol,
             opts.tab_powerline_style,
@@ -539,11 +538,12 @@ class TabBar:
         elif opts.tab_bar_align == 'right':
             align = self.align_with_factor
         else:
+
             def align():
                 return None
 
         if opts.hide_window_decorations > 1:
-            self.button_margin = 7
+            self.button_margin = 8
 
             def center_single_tab():
                 if len(self.cell_ranges) > 1:
@@ -638,8 +638,7 @@ class TabBar:
         s.reset_mode(DECAWM)
         self.laid_out_once = True
         margin = (viewport_width - ncells * cell_width) // 2 + self.margin_width
-        self.window_geometry = g = WindowGeometry(
-            margin, tab_bar.top, viewport_width - margin, tab_bar.bottom, s.columns, s.lines)
+        self.window_geometry = g = WindowGeometry(margin, tab_bar.top, viewport_width - margin, tab_bar.bottom, s.columns, s.lines)
         self.update_blank_rects(central, tab_bar, vw, vh)
         set_tab_bar_render_data(self.os_window_id, self.screen, *g[:4])
 
@@ -660,11 +659,11 @@ class TabBar:
             end = self.draw_func(self.draw_data, s, t, before, max_tab_length, i + 1, t is last_tab, ed)
             s.cursor.bg = s.cursor.fg = 0
             cell_ranges.append((before, end))
-            if not ed.for_layout and t is not last_tab and s.cursor.x > s.columns - max_tab_lengths[i+1]:
+            if not ed.for_layout and t is not last_tab and s.cursor.x > s.columns - max_tab_lengths[i + 1]:
                 # Stop if there is no space for next tab
                 s.cursor.x = s.columns - 2
                 s.cursor.bg = as_rgb(color_as_int(self.draw_data.default_bg))
-                s.cursor.fg = as_rgb(0xff0000)
+                s.cursor.fg = as_rgb(0xFF0000)
                 s.draw(' …')
                 raise StopIteration()
 
