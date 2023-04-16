@@ -19,6 +19,7 @@ that you are using the system python to build.
 brew bundle
 LDFLAGS=-L/opt/homebrew/lib python3 setup.py  --extra-include-dirs /opt/homebrew/Cellar/librsync/{VERSION}/include
 pip3 install -r docs/requirements.txt
+make docs
 LDFLAGS=-L/opt/homebrew/lib python3 setup.py kitty.app  --extra-include-dirs /opt/homebrew/Cellar/librsync/{VERSION}/include
 ```
 
