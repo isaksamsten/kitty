@@ -24,7 +24,7 @@ cwd_of_process(PyObject *self UNUSED, PyObject *pid_) {
 
 // Read the maximum argument size for processes
 static int
-get_argmax(void) {
+get_argmax() {
     int argmax;
     int mib[] = { CTL_KERN, KERN_ARGMAX };
     size_t size = sizeof(argmax);
