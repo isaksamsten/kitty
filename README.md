@@ -2,7 +2,12 @@
 
 This fork makes Kitty more usable on macOS without title bar enabled.
 
-**NOTE** THESE CHANGES WILL NOTE BE MERGED INTO MAIN.
+**NOTE** THESE CHANGES WILL NOT BE MERGED INTO UPSTREAM.
+
+If you don't want these changes, use [kovidgoyal/kitty](https://github.com/kovidgoyal/kitty).
+
+**NOTE** I will rebase `upstream/master` into this branch and try to keep each
+version after `0.28.0` in separate branches with the patches applied.
 
 ## Changes
 
@@ -13,7 +18,8 @@ This fork makes Kitty more usable on macOS without title bar enabled.
 ## Build
 
 First, if you are using `conda` run `conda deactivate` to ensure
-that you are using the system python to build.
+that you are using the system python to build. For Mac with ARM, use
+the following instructions to build.
 
 ```shell
 brew bundle
@@ -21,6 +27,12 @@ LDFLAGS=-L/opt/homebrew/lib python3 setup.py  --extra-include-dirs /opt/homebrew
 pip3 install -r docs/requirements.txt
 make docs
 LDFLAGS=-L/opt/homebrew/lib python3 setup.py kitty.app  --extra-include-dirs /opt/homebrew/Cellar/librsync/{VERSION}/include
+```
+
+For Intel MAC, it is probably enough to run:
+
+```shell
+python3 setup.py && pip3 install -r docs/requirements.txt && make docs && python3 setup.py kitty.app
 ```
 
 Move `kitty.app` to `/Applications`
