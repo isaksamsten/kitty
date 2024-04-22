@@ -1,3 +1,5 @@
+# [NEW AND IMPROVED FORK HERE](https://github.com/isaksamsten/kitty-macos)
+
 # kitty - the fast, feature-rich, cross-platform, GPU based terminal
 
 This fork makes Kitty more usable on macOS without title bar enabled.
